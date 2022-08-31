@@ -15,7 +15,13 @@ for (let i = 0; i < data.artists.length; i++) {
   data.artists[i].index = i;
 }
 
+let svdL = null;
+let svdH = null;
+
 function cosinesim(vec1, vec2) {
+  if (!vec1 || !vec2) {
+    return 0;
+  }
   let dotproduct = 0;
   let mA = 0;
   let mB = 0;
@@ -38,7 +44,34 @@ function putSimilarities(srcArtistNames, filteredArtists) {
       (artist) => artist.a === srcArtistName
     )[0].index;
     for (let artist of filteredArtists) {
-      artist.sim += cosinesim(data.svd[srcArtistIndex], data.svd[artist.index]);
+      if (srcArtistIndex > artist.index) {
+        artist.sim +=
+          Math.pow(
+            Math.abs(
+              cosinesim(
+                (svdL || {})[srcArtistIndex],
+                (svdL || {})[artist.index]
+              )
+              // (artist.index + 500)
+            ),
+            1
+            // todo: check if this does sth
+          ) /
+          (artist.index + 1000);
+      } else {
+        artist.sim +=
+          Math.pow(
+            Math.abs(
+              cosinesim(
+                (svdH || {})[srcArtistIndex],
+                (svdH || {})[artist.index]
+              )
+              // (artist.index + 500)
+            ),
+            1
+          ) /
+          (artist.index + 1000);
+      }
     }
   }
 }
@@ -66,6 +99,19 @@ class AppStore {
   constructor() {
     this.init();
     makeAutoObservable(this);
+
+    fetch("./svdL.json")
+      .then((response) => response.json())
+      .then((data) => {
+        svdL = data;
+        this.refreshFilters();
+      });
+    fetch("./svdH.json")
+      .then((response) => response.json())
+      .then((data) => {
+        svdH = data;
+        this.refreshFilters();
+      });
   }
   init() {
     try {
@@ -195,7 +241,7 @@ class AppStore {
     });
     if (Object.keys(this.similarToArtists).length) {
       putSimilarities(Object.keys(this.similarToArtists), filteredArtists);
-      console.log(filteredArtists.length, data.svd.length);
+      // console.log(filteredArtists.length, data.svd.length);
       filteredArtists.sort((a, b) => b.sim - a.sim);
     } else {
       filteredArtists.sort((a, b) => a.index - b.index);
