@@ -15,11 +15,10 @@ for (let i = 0; i < data.artists.length; i++) {
   data.artists[i].index = i;
 }
 
-let svdL = null;
-let svdH = null;
+let vecs = null;
 
 function cosinesim(vec1, vec2) {
-  if (!vec1 || !vec2) {
+  if (!vec1 || !vec2 || vec1.length !== vec2.length) {
     return 0;
   }
   let dotproduct = 0;
@@ -32,46 +31,28 @@ function cosinesim(vec1, vec2) {
   }
   mA = Math.sqrt(mA);
   mB = Math.sqrt(mB);
-  return (dotproduct / mA) * mB;
+  return dotproduct / (mA * mB);
 }
 
 function putSimilarities(srcArtistNames, filteredArtists) {
   for (let artist of filteredArtists) {
     artist.sim = 0;
   }
+  console.log(srcArtistNames.length);
   for (let srcArtistName of srcArtistNames) {
     const srcArtistIndex = data.artists.filter(
       (artist) => artist.a === srcArtistName
     )[0].index;
     for (let artist of filteredArtists) {
-      if (srcArtistIndex > artist.index) {
-        artist.sim +=
-          Math.pow(
-            Math.abs(
-              cosinesim(
-                (svdL || {})[srcArtistIndex],
-                (svdL || {})[artist.index]
-              )
-              // (artist.index + 500)
-            ),
-            1
-            // todo: check if this does sth
-          ) /
-          (artist.index + 1000);
-      } else {
-        artist.sim +=
-          Math.pow(
-            Math.abs(
-              cosinesim(
-                (svdH || {})[srcArtistIndex],
-                (svdH || {})[artist.index]
-              )
-              // (artist.index + 500)
-            ),
-            1
-          ) /
-          (artist.index + 1000);
+      if (artist.a === "Hladno Pivo") {
+        console.log(
+          cosinesim((vecs || {})[srcArtistIndex], (vecs || {})[artist.index])
+        );
       }
+      artist.sim += cosinesim(
+        (vecs || {})[srcArtistIndex],
+        (vecs || {})[artist.index]
+      );
     }
   }
 }
@@ -100,16 +81,10 @@ class AppStore {
     this.init();
     makeAutoObservable(this);
 
-    fetch("./svdL.json")
+    fetch("./vecs.json")
       .then((response) => response.json())
       .then((data) => {
-        svdL = data;
-        this.refreshFilters();
-      });
-    fetch("./svdH.json")
-      .then((response) => response.json())
-      .then((data) => {
-        svdH = data;
+        vecs = data;
         this.refreshFilters();
       });
   }
